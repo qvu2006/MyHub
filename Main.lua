@@ -1,5 +1,5 @@
 -- =========================================
--- MYHUB - BLOX FRUITS (TABS + SLIDER)
+-- MYHUB | BLOX FRUITS | FULL
 -- XENO SAFE | ONE FILE
 -- =========================================
 
@@ -9,18 +9,37 @@ repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
+local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
--- ================= CONFIG ===================
+-- ================= CONFIG + SAVE =================
+local ConfigFile = "MyHub_Config.json"
 local Config = {
     AutoFarm  = false,
+    HoverFarm = true,
     AutoClick = false,
+    FastPunch = true,
     Reach     = false,
     ReachSize = 25,
     ESP       = false,
 }
 
--- ================= UTILS ====================
+local function SaveConfig()
+    if writefile then
+        writefile(ConfigFile, HttpService:JSONEncode(Config))
+    end
+end
+
+local function LoadConfig()
+    if readfile and isfile and isfile(ConfigFile) then
+        local data = HttpService:JSONDecode(readfile(ConfigFile))
+        for k,v in pairs(data) do Config[k] = v end
+    end
+end
+LoadConfig()
+
+-- ================= UTILS =================
 local function Char()
     return LocalPlayer.Character
 end
@@ -32,13 +51,13 @@ local function TP(cf)
     if HRP() then HRP().CFrame = cf end
 end
 
--- ================= UI BASE ==================
+-- ================= UI BASE =================
 local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "MyHubUI"
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.fromScale(0.42, 0.5)
-main.Position = UDim2.fromScale(0.29, 0.25)
+main.Size = UDim2.fromScale(0.45,0.55)
+main.Position = UDim2.fromScale(0.275,0.22)
 main.BackgroundColor3 = Color3.fromRGB(25,25,25)
 main.Active, main.Draggable = true, true
 
@@ -52,25 +71,23 @@ title.BackgroundTransparency = 1
 -- Tabs bar
 local tabBar = Instance.new("Frame", main)
 tabBar.Position = UDim2.fromScale(0,0.12)
-tabBar.Size = UDim2.fromScale(1,0.12)
+tabBar.Size = UDim2.fromScale(1,0.1)
 tabBar.BackgroundColor3 = Color3.fromRGB(35,35,35)
 
--- Content holder
+-- Pages
 local pages = Instance.new("Frame", main)
-pages.Position = UDim2.fromScale(0,0.24)
-pages.Size = UDim2.fromScale(1,0.76)
+pages.Position = UDim2.fromScale(0,0.22)
+pages.Size = UDim2.fromScale(1,0.78)
 pages.BackgroundTransparency = 1
 
-local Tabs = {}
 local CurrentTab
-
 local function NewTab(name, order)
     local btn = Instance.new("TextButton", tabBar)
     btn.Size = UDim2.fromScale(0.33,1)
     btn.Position = UDim2.fromScale((order-1)*0.33,0)
     btn.Text = name
     btn.TextColor3 = Color3.new(1,1,1)
-    btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    btn.BackgroundColor3 = Color3.fromRGB(55,55,55)
 
     local page = Instance.new("Frame", pages)
     page.Size = UDim2.fromScale(1,1)
@@ -83,14 +100,12 @@ local function NewTab(name, order)
         CurrentTab = page
     end)
 
-    Tabs[name] = page
     return page
 end
 
--- Create Tabs
-local CombatTab = NewTab("Combat", 1)
-local FarmTab   = NewTab("Farm",   2)
-local ESPTab    = NewTab("ESP",    3)
+local CombatTab = NewTab("Combat",1)
+local FarmTab   = NewTab("Farm",2)
+local ESPTab    = NewTab("ESP",3)
 CombatTab.Visible = true
 CurrentTab = CombatTab
 
@@ -99,19 +114,20 @@ local function Toggle(parent, text, y, key)
     local b = Instance.new("TextButton", parent)
     b.Size = UDim2.fromScale(0.8,0.12)
     b.Position = UDim2.fromScale(0.1,y)
-    b.BackgroundColor3 = Color3.fromRGB(55,55,55)
+    b.BackgroundColor3 = Color3.fromRGB(60,60,60)
     b.TextColor3 = Color3.new(1,1,1)
     b.Text = text..": "..(Config[key] and "ON" or "OFF")
 
     b.MouseButton1Click:Connect(function()
         Config[key] = not Config[key]
         b.Text = text..": "..(Config[key] and "ON" or "OFF")
+        SaveConfig()
     end)
 end
 
 local function Slider(parent, text, y, min, max, key)
     local holder = Instance.new("Frame", parent)
-    holder.Size = UDim2.fromScale(0.8,0.16)
+    holder.Size = UDim2.fromScale(0.8,0.18)
     holder.Position = UDim2.fromScale(0.1,y)
     holder.BackgroundTransparency = 1
 
@@ -124,7 +140,7 @@ local function Slider(parent, text, y, min, max, key)
     local bar = Instance.new("Frame", holder)
     bar.Position = UDim2.fromScale(0,0.55)
     bar.Size = UDim2.fromScale(1,0.25)
-    bar.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    bar.BackgroundColor3 = Color3.fromRGB(70,70,70)
 
     local fill = Instance.new("Frame", bar)
     fill.Size = UDim2.fromScale((Config[key]-min)/(max-min),1)
@@ -140,52 +156,66 @@ local function Slider(parent, text, y, min, max, key)
 
     RunService.RenderStepped:Connect(function()
         if dragging then
-            local x = math.clamp(
-                (game:GetService("UserInputService"):GetMouseLocation().X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,
-                0,1
-            )
+            local x = math.clamp((UIS:GetMouseLocation().X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
             fill.Size = UDim2.fromScale(x,1)
             Config[key] = math.floor(min + (max-min)*x)
             lbl.Text = text..": "..Config[key]
+            SaveConfig()
         end
     end)
 end
 
--- ================= BUILD UI ===================
+-- ================= BUILD UI =================
 -- Combat
-Toggle(CombatTab, "Auto Click (0s)", 0.05, "AutoClick")
-Toggle(CombatTab, "Reach (Tầm đánh)", 0.22, "Reach")
-Slider(CombatTab, "Reach Size", 0.42, 10, 60, "ReachSize")
+Toggle(CombatTab,"Auto Click (0s)",0.05,"AutoClick")
+Toggle(CombatTab,"Fast Punch",0.18,"FastPunch")
+Toggle(CombatTab,"Reach (Tầm đánh)",0.31,"Reach")
+Slider(CombatTab,"Reach Size",0.48,10,60,"ReachSize")
 
 -- Farm
-Toggle(FarmTab, "Auto Farm", 0.05, "AutoFarm")
+Toggle(FarmTab,"Auto Farm",0.05,"AutoFarm")
+Toggle(FarmTab,"Hover Farm (Bay)",0.18,"HoverFarm")
 
 -- ESP
-Toggle(ESPTab, "ESP Enemy", 0.05, "ESP")
+Toggle(ESPTab,"ESP Enemy",0.05,"ESP")
 
--- ================= AUTO CLICK (0s) =================
+-- ================= AUTO CLICK + FAST PUNCH =================
 RunService.Heartbeat:Connect(function()
     if Config.AutoClick then
         pcall(function()
             VirtualUser:Button1Down(Vector2.new(0,0))
             VirtualUser:Button1Up(Vector2.new(0,0))
+            if Config.FastPunch then
+                VirtualUser:Button1Down(Vector2.new(0,0))
+                VirtualUser:Button1Up(Vector2.new(0,0))
+            end
         end)
     end
 end)
 
--- ================= AUTO FARM =================
+-- ================= AUTO FARM (HOVER) =================
+local function GetEnemy()
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not enemies then return end
+    for _,mob in pairs(enemies:GetChildren()) do
+        local hrp = mob:FindFirstChild("HumanoidRootPart")
+        local hum = mob:FindFirstChild("Humanoid")
+        if hrp and hum and hum.Health > 0 then
+            return mob
+        end
+    end
+end
+
 task.spawn(function()
-    while task.wait(0.25) do
+    while task.wait(0.15) do
         if Config.AutoFarm then
-            local enemies = workspace:FindFirstChild("Enemies")
-            if enemies then
-                for _,mob in pairs(enemies:GetChildren()) do
-                    local hrp = mob:FindFirstChild("HumanoidRootPart")
-                    local hum = mob:FindFirstChild("Humanoid")
-                    if hrp and hum and hum.Health > 0 then
-                        TP(hrp.CFrame * CFrame.new(0,0,3))
-                        break
-                    end
+            local mob = GetEnemy()
+            if mob and mob:FindFirstChild("HumanoidRootPart") then
+                local hrp = mob.HumanoidRootPart
+                if Config.HoverFarm then
+                    TP(hrp.CFrame * CFrame.new(0,12,0)) -- bay phía trên
+                else
+                    TP(hrp.CFrame * CFrame.new(0,0,3))
                 end
             end
         end
@@ -247,4 +277,4 @@ task.spawn(function()
     end
 end)
 
-print("MyHub READY")
+print("MyHub FULL READY")
