@@ -1,5 +1,5 @@
 --==================================================
--- MYHUB - FULL HUB FRAMEWORK (1 FILE)
+-- MYHUB - FULL SINGLE FILE
 --==================================================
 
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -13,6 +13,7 @@ local HttpService = game:GetService("HttpService")
 local UIS = game:GetService("UserInputService")
 
 local LP = Players.LocalPlayer
+local Mouse = LP:GetMouse()
 
 --================= KEY SYSTEM =================
 local ValidKeys = {
@@ -20,40 +21,70 @@ local ValidKeys = {
     ["MYHUB-VIP"] = true
 }
 
-local function CheckKey(key)
-    return ValidKeys[key] == true
+local function CheckKey(k)
+    return ValidKeys[k] == true
 end
 
---================= CONFIG SAVE =================
+local KeyOK = false
+local KeyGui = Instance.new("ScreenGui", game.CoreGui)
+KeyGui.Name = "MyHubKey"
+
+local KF = Instance.new("Frame", KeyGui)
+KF.Size = UDim2.fromScale(0.3,0.25)
+KF.Position = UDim2.fromScale(0.35,0.35)
+KF.BackgroundColor3 = Color3.fromRGB(30,30,30)
+KF.Active, KF.Draggable = true, true
+
+local KL = Instance.new("TextLabel", KF)
+KL.Size = UDim2.fromScale(1,0.25)
+KL.Text = "MYHUB KEY SYSTEM"
+KL.TextScaled = true
+KL.TextColor3 = Color3.new(1,1,1)
+KL.BackgroundTransparency = 1
+
+local KB = Instance.new("TextBox", KF)
+KB.PlaceholderText = "Enter Key..."
+KB.Size = UDim2.fromScale(0.8,0.25)
+KB.Position = UDim2.fromScale(0.1,0.35)
+KB.TextScaled = true
+KB.BackgroundColor3 = Color3.fromRGB(50,50,50)
+KB.TextColor3 = Color3.new(1,1,1)
+
+local KBtn = Instance.new("TextButton", KF)
+KBtn.Text = "VERIFY"
+KBtn.Size = UDim2.fromScale(0.5,0.2)
+KBtn.Position = UDim2.fromScale(0.25,0.7)
+KBtn.BackgroundColor3 = Color3.fromRGB(70,70,70)
+KBtn.TextColor3 = Color3.new(1,1,1)
+
+KBtn.MouseButton1Click:Connect(function()
+    if CheckKey(KB.Text) then
+        KeyOK = true
+        KeyGui:Destroy()
+    else
+        KBtn.Text = "INVALID"
+        task.wait(1)
+        KBtn.Text = "VERIFY"
+    end
+end)
+
+repeat task.wait() until KeyOK
+
+--================= CONFIG =================
 local ConfigFile = "MyHub_Config.json"
 local Config = {
-    -- Combat
     AutoClick = false,
     FastPunch = false,
     Reach = false,
     ReachSize = 25,
-    Weapon = "Melee",
 
-    -- Farm
     AutoFarm = false,
     HoverFarm = true,
-    AutoQuest = false,
-    AutoLevel = false,
-    BringMob = false,
 
-    -- Boss
-    AutoBoss = false,
-    SelectedBoss = "",
-
-    -- ESP
     ESP_Player = false,
     ESP_Enemy = false,
-    ESP_Boss = false,
 
-    -- Misc
-    AntiAFK = true,
-    AntiStuck = true,
-    FPSBoost = false
+    AntiAFK = true
 }
 
 local function SaveConfig()
@@ -64,10 +95,8 @@ end
 
 local function LoadConfig()
     if readfile and isfile and isfile(ConfigFile) then
-        local data = HttpService:JSONDecode(readfile(ConfigFile))
-        for k,v in pairs(data) do
-            Config[k] = v
-        end
+        local d = HttpService:JSONDecode(readfile(ConfigFile))
+        for k,v in pairs(d) do Config[k] = v end
     end
 end
 
@@ -82,11 +111,7 @@ local function HRP()
     return Char() and Char():FindFirstChild("HumanoidRootPart")
 end
 
-local function TP(cf)
-    if HRP() then HRP().CFrame = cf end
-end
-
---================= UI BASE =================
+--================= UI =================
 local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "MyHubUI"
 
@@ -98,12 +123,11 @@ main.Active, main.Draggable = true, true
 
 local title = Instance.new("TextLabel", main)
 title.Size = UDim2.fromScale(1,0.1)
-title.Text = "MyHub - Full Framework"
+title.Text = "MYHUB - SINGLE FILE"
 title.TextScaled = true
 title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
 
---================= TAB SYSTEM =================
 local tabBar = Instance.new("Frame", main)
 tabBar.Position = UDim2.fromScale(0,0.1)
 tabBar.Size = UDim2.fromScale(1,0.1)
@@ -116,40 +140,37 @@ pages.BackgroundTransparency = 1
 
 local CurrentTab
 local function NewTab(name, order)
-    local btn = Instance.new("TextButton", tabBar)
-    btn.Size = UDim2.fromScale(0.2,1)
-    btn.Position = UDim2.fromScale((order-1)*0.2,0)
-    btn.Text = name
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    local b = Instance.new("TextButton", tabBar)
+    b.Size = UDim2.fromScale(0.33,1)
+    b.Position = UDim2.fromScale((order-1)*0.33,0)
+    b.Text = name
+    b.TextColor3 = Color3.new(1,1,1)
+    b.BackgroundColor3 = Color3.fromRGB(60,60,60)
 
-    local page = Instance.new("Frame", pages)
-    page.Size = UDim2.fromScale(1,1)
-    page.Visible = false
-    page.BackgroundTransparency = 1
+    local p = Instance.new("Frame", pages)
+    p.Size = UDim2.fromScale(1,1)
+    p.Visible = false
+    p.BackgroundTransparency = 1
 
-    btn.MouseButton1Click:Connect(function()
+    b.MouseButton1Click:Connect(function()
         if CurrentTab then CurrentTab.Visible = false end
-        page.Visible = true
-        CurrentTab = page
+        p.Visible = true
+        CurrentTab = p
     end)
 
-    return page
+    return p
 end
 
-local CombatTab   = NewTab("Combat",1)
-local FarmTab     = NewTab("Farm",2)
-local BossTab     = NewTab("Boss",3)
-local TeleportTab = NewTab("Teleport",4)
-local ESPTab      = NewTab("ESP",5)
+local CombatTab = NewTab("Combat",1)
+local FarmTab   = NewTab("Farm",2)
+local ESPTab    = NewTab("ESP",3)
 
 CombatTab.Visible = true
 CurrentTab = CombatTab
 
---================= UI ELEMENTS =================
 local function Toggle(parent, text, y, key)
     local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.fromScale(0.8,0.1)
+    b.Size = UDim2.fromScale(0.8,0.12)
     b.Position = UDim2.fromScale(0.1,y)
     b.BackgroundColor3 = Color3.fromRGB(70,70,70)
     b.TextColor3 = Color3.new(1,1,1)
@@ -162,29 +183,60 @@ local function Toggle(parent, text, y, key)
     end)
 end
 
---================= BUILD UI =================
--- Combat
+-- UI Build
 Toggle(CombatTab,"Auto Click",0.05,"AutoClick")
-Toggle(CombatTab,"Fast Punch",0.17,"FastPunch")
-Toggle(CombatTab,"Reach",0.29,"Reach")
+Toggle(CombatTab,"Fast Punch",0.20,"FastPunch")
+Toggle(CombatTab,"Reach",0.35,"Reach")
 
--- Farm
-Toggle(FarmTab,"Auto Farm",0.05,"AutoFarm")
-Toggle(FarmTab,"Hover Farm",0.17,"HoverFarm")
-Toggle(FarmTab,"Auto Quest",0.29,"AutoQuest")
-Toggle(FarmTab,"Auto Level",0.41,"AutoLevel")
-Toggle(FarmTab,"Bring Mob (Safe)",0.53,"BringMob")
+Toggle(FarmTab,"Auto Farm (Safe)",0.05,"AutoFarm")
+Toggle(FarmTab,"Hover Farm",0.20,"HoverFarm")
 
--- Boss
-Toggle(BossTab,"Auto Boss",0.05,"AutoBoss")
-
--- ESP
 Toggle(ESPTab,"ESP Player",0.05,"ESP_Player")
-Toggle(ESPTab,"ESP Enemy",0.17,"ESP_Enemy")
-Toggle(ESPTab,"ESP Boss",0.29,"ESP_Boss")
+Toggle(ESPTab,"ESP Enemy",0.20,"ESP_Enemy")
 
---================= LOGIC PLACEHOLDER =================
--- Anti AFK
+--================= COMBAT LOGIC =================
+task.spawn(function()
+    while task.wait(0.1) do
+        if Config.AutoClick then
+            mouse1click()
+            if Config.FastPunch then
+                task.wait(0.05)
+                mouse1click()
+            end
+        end
+    end
+end)
+
+local Skills = {Enum.KeyCode.Z,Enum.KeyCode.X,Enum.KeyCode.C,Enum.KeyCode.V}
+task.spawn(function()
+    while task.wait(0.3) do
+        if Config.FastPunch then
+            for _,k in ipairs(Skills) do
+                keypress(k)
+                task.wait(0.05)
+                keyrelease(k)
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if Config.Reach then
+            for _,v in pairs(workspace:GetDescendants()) do
+                if v:IsA("BasePart")
+                and v.Name == "HumanoidRootPart"
+                and v.Parent ~= LP.Character then
+                    v.Size = Vector3.new(Config.ReachSize,Config.ReachSize,Config.ReachSize)
+                    v.Transparency = 0.7
+                    v.Material = Enum.Material.Neon
+                end
+            end
+        end
+    end
+end)
+
+--================= ANTI AFK =================
 if Config.AntiAFK then
     LP.Idled:Connect(function()
         VirtualUser:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
@@ -193,9 +245,4 @@ if Config.AntiAFK then
     end)
 end
 
--- FPS Boost (SAFE)
-if Config.FPSBoost then
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-end
-
-print("MyHub Framework Loaded Successfully")
+print("MYHUB LOADED SUCCESSFULLY")
