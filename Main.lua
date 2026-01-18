@@ -112,27 +112,58 @@ Toggle("Auto Boss",0.60,"AutoBoss")
 Toggle("ESP",0.74,"ESP")
 
 -- =========================================
--- ESP (PLAYER + MOB)
+-- ESP SAFE (PLAYER + ENEMY)
 -- =========================================
+local function ClearESP()
+    for _,v in pairs(game.CoreGui:GetDescendants()) do
+        if v.Name == "MyHubESP" then
+            v:Destroy()
+        end
+    end
+end
+
 task.spawn(function()
     while task.wait(1) do
-        if Config.ESP then
-            for _,m in pairs(workspace:GetDescendants()) do
-                if m:IsA("Model") and m:FindFirstChild("HumanoidRootPart") then
-                    if not m:FindFirstChild("ESP") then
-                        local box = Instance.new("BoxHandleAdornment", m)
-                        box.Name = "ESP"
-                        box.Adornee = m.HumanoidRootPart
+        if not Config.ESP then
+            ClearESP()
+            continue
+        end
+
+        -- PLAYER ESP
+        for _,plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                if hrp and not hrp:FindFirstChild("MyHubESP") then
+                    local box = Instance.new("BoxHandleAdornment")
+                    box.Name = "MyHubESP"
+                    box.Adornee = hrp
+                    box.Size = Vector3.new(4,6,4)
+                    box.AlwaysOnTop = true
+                    box.ZIndex = 10
+                    box.Color3 = Color3.new(0,1,0)
+                    box.Parent = hrp
+                end
+            end
+        end
+
+        -- ENEMY ESP
+        local enemies = workspace:FindFirstChild("Enemies")
+        if enemies then
+            for _,mob in pairs(enemies:GetChildren()) do
+                local hrp = mob:FindFirstChild("HumanoidRootPart")
+                local hum = mob:FindFirstChild("Humanoid")
+                if hrp and hum and hum.Health > 0 then
+                    if not hrp:FindFirstChild("MyHubESP") then
+                        local box = Instance.new("BoxHandleAdornment")
+                        box.Name = "MyHubESP"
+                        box.Adornee = hrp
                         box.Size = Vector3.new(4,6,4)
                         box.AlwaysOnTop = true
                         box.ZIndex = 10
                         box.Color3 = Color3.new(1,0,0)
+                        box.Parent = hrp
                     end
                 end
-            end
-        else
-            for _,v in pairs(workspace:GetDescendants()) do
-                if v.Name == "ESP" then v:Destroy() end
             end
         end
     end
@@ -186,3 +217,4 @@ task.spawn(function()
 end)
 
 print("MyHub FULL READY")
+
