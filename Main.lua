@@ -1,28 +1,59 @@
--- =========================================
--- MYHUB | BLOX FRUITS | FULL
--- XENO SAFE | ONE FILE
--- =========================================
+--==================================================
+-- MYHUB - FULL HUB FRAMEWORK (1 FILE)
+--==================================================
 
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
--- ================= SERVICES =================
+--================= SERVICES =================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
 local VirtualUser = game:GetService("VirtualUser")
 local HttpService = game:GetService("HttpService")
 local UIS = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
 
--- ================= CONFIG + SAVE =================
+local LP = Players.LocalPlayer
+
+--================= KEY SYSTEM =================
+local ValidKeys = {
+    ["MYHUB-TEST"] = true,
+    ["MYHUB-VIP"] = true
+}
+
+local function CheckKey(key)
+    return ValidKeys[key] == true
+end
+
+--================= CONFIG SAVE =================
 local ConfigFile = "MyHub_Config.json"
 local Config = {
-    AutoFarm  = false,
-    HoverFarm = true,
+    -- Combat
     AutoClick = false,
-    FastPunch = true,
-    Reach     = false,
+    FastPunch = false,
+    Reach = false,
     ReachSize = 25,
-    ESP       = false,
+    Weapon = "Melee",
+
+    -- Farm
+    AutoFarm = false,
+    HoverFarm = true,
+    AutoQuest = false,
+    AutoLevel = false,
+    BringMob = false,
+
+    -- Boss
+    AutoBoss = false,
+    SelectedBoss = "",
+
+    -- ESP
+    ESP_Player = false,
+    ESP_Enemy = false,
+    ESP_Boss = false,
+
+    -- Misc
+    AntiAFK = true,
+    AntiStuck = true,
+    FPSBoost = false
 }
 
 local function SaveConfig()
@@ -34,60 +65,63 @@ end
 local function LoadConfig()
     if readfile and isfile and isfile(ConfigFile) then
         local data = HttpService:JSONDecode(readfile(ConfigFile))
-        for k,v in pairs(data) do Config[k] = v end
+        for k,v in pairs(data) do
+            Config[k] = v
+        end
     end
 end
+
 LoadConfig()
 
--- ================= UTILS =================
+--================= UTILS =================
 local function Char()
-    return LocalPlayer.Character
+    return LP.Character
 end
+
 local function HRP()
-    local c = Char()
-    return c and c:FindFirstChild("HumanoidRootPart")
+    return Char() and Char():FindFirstChild("HumanoidRootPart")
 end
+
 local function TP(cf)
     if HRP() then HRP().CFrame = cf end
 end
 
--- ================= UI BASE =================
+--================= UI BASE =================
 local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "MyHubUI"
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.fromScale(0.45,0.55)
-main.Position = UDim2.fromScale(0.275,0.22)
+main.Size = UDim2.fromScale(0.5,0.6)
+main.Position = UDim2.fromScale(0.25,0.2)
 main.BackgroundColor3 = Color3.fromRGB(25,25,25)
 main.Active, main.Draggable = true, true
 
 local title = Instance.new("TextLabel", main)
-title.Size = UDim2.fromScale(1,0.12)
-title.Text = "MyHub | Blox Fruits"
+title.Size = UDim2.fromScale(1,0.1)
+title.Text = "MyHub - Full Framework"
 title.TextScaled = true
 title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
 
--- Tabs bar
+--================= TAB SYSTEM =================
 local tabBar = Instance.new("Frame", main)
-tabBar.Position = UDim2.fromScale(0,0.12)
+tabBar.Position = UDim2.fromScale(0,0.1)
 tabBar.Size = UDim2.fromScale(1,0.1)
 tabBar.BackgroundColor3 = Color3.fromRGB(35,35,35)
 
--- Pages
 local pages = Instance.new("Frame", main)
-pages.Position = UDim2.fromScale(0,0.22)
-pages.Size = UDim2.fromScale(1,0.78)
+pages.Position = UDim2.fromScale(0,0.2)
+pages.Size = UDim2.fromScale(1,0.8)
 pages.BackgroundTransparency = 1
 
 local CurrentTab
 local function NewTab(name, order)
     local btn = Instance.new("TextButton", tabBar)
-    btn.Size = UDim2.fromScale(0.33,1)
-    btn.Position = UDim2.fromScale((order-1)*0.33,0)
+    btn.Size = UDim2.fromScale(0.2,1)
+    btn.Position = UDim2.fromScale((order-1)*0.2,0)
     btn.Text = name
     btn.TextColor3 = Color3.new(1,1,1)
-    btn.BackgroundColor3 = Color3.fromRGB(55,55,55)
+    btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
 
     local page = Instance.new("Frame", pages)
     page.Size = UDim2.fromScale(1,1)
@@ -103,18 +137,21 @@ local function NewTab(name, order)
     return page
 end
 
-local CombatTab = NewTab("Combat",1)
-local FarmTab   = NewTab("Farm",2)
-local ESPTab    = NewTab("ESP",3)
+local CombatTab   = NewTab("Combat",1)
+local FarmTab     = NewTab("Farm",2)
+local BossTab     = NewTab("Boss",3)
+local TeleportTab = NewTab("Teleport",4)
+local ESPTab      = NewTab("ESP",5)
+
 CombatTab.Visible = true
 CurrentTab = CombatTab
 
--- ================= UI ELEMENTS =================
+--================= UI ELEMENTS =================
 local function Toggle(parent, text, y, key)
     local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.fromScale(0.8,0.12)
+    b.Size = UDim2.fromScale(0.8,0.1)
     b.Position = UDim2.fromScale(0.1,y)
-    b.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    b.BackgroundColor3 = Color3.fromRGB(70,70,70)
     b.TextColor3 = Color3.new(1,1,1)
     b.Text = text..": "..(Config[key] and "ON" or "OFF")
 
@@ -125,156 +162,40 @@ local function Toggle(parent, text, y, key)
     end)
 end
 
-local function Slider(parent, text, y, min, max, key)
-    local holder = Instance.new("Frame", parent)
-    holder.Size = UDim2.fromScale(0.8,0.18)
-    holder.Position = UDim2.fromScale(0.1,y)
-    holder.BackgroundTransparency = 1
-
-    local lbl = Instance.new("TextLabel", holder)
-    lbl.Size = UDim2.fromScale(1,0.45)
-    lbl.Text = text..": "..Config[key]
-    lbl.TextColor3 = Color3.new(1,1,1)
-    lbl.BackgroundTransparency = 1
-
-    local bar = Instance.new("Frame", holder)
-    bar.Position = UDim2.fromScale(0,0.55)
-    bar.Size = UDim2.fromScale(1,0.25)
-    bar.BackgroundColor3 = Color3.fromRGB(70,70,70)
-
-    local fill = Instance.new("Frame", bar)
-    fill.Size = UDim2.fromScale((Config[key]-min)/(max-min),1)
-    fill.BackgroundColor3 = Color3.fromRGB(120,120,120)
-
-    local dragging = false
-    bar.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
-    end)
-    bar.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-    end)
-
-    RunService.RenderStepped:Connect(function()
-        if dragging then
-            local x = math.clamp((UIS:GetMouseLocation().X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
-            fill.Size = UDim2.fromScale(x,1)
-            Config[key] = math.floor(min + (max-min)*x)
-            lbl.Text = text..": "..Config[key]
-            SaveConfig()
-        end
-    end)
-end
-
--- ================= BUILD UI =================
+--================= BUILD UI =================
 -- Combat
-Toggle(CombatTab,"Auto Click (0s)",0.05,"AutoClick")
-Toggle(CombatTab,"Fast Punch",0.18,"FastPunch")
-Toggle(CombatTab,"Reach (Tầm đánh)",0.31,"Reach")
-Slider(CombatTab,"Reach Size",0.48,10,60,"ReachSize")
+Toggle(CombatTab,"Auto Click",0.05,"AutoClick")
+Toggle(CombatTab,"Fast Punch",0.17,"FastPunch")
+Toggle(CombatTab,"Reach",0.29,"Reach")
 
 -- Farm
 Toggle(FarmTab,"Auto Farm",0.05,"AutoFarm")
-Toggle(FarmTab,"Hover Farm (Bay)",0.18,"HoverFarm")
+Toggle(FarmTab,"Hover Farm",0.17,"HoverFarm")
+Toggle(FarmTab,"Auto Quest",0.29,"AutoQuest")
+Toggle(FarmTab,"Auto Level",0.41,"AutoLevel")
+Toggle(FarmTab,"Bring Mob (Safe)",0.53,"BringMob")
+
+-- Boss
+Toggle(BossTab,"Auto Boss",0.05,"AutoBoss")
 
 -- ESP
-Toggle(ESPTab,"ESP Enemy",0.05,"ESP")
+Toggle(ESPTab,"ESP Player",0.05,"ESP_Player")
+Toggle(ESPTab,"ESP Enemy",0.17,"ESP_Enemy")
+Toggle(ESPTab,"ESP Boss",0.29,"ESP_Boss")
 
--- ================= AUTO CLICK + FAST PUNCH =================
-RunService.Heartbeat:Connect(function()
-    if Config.AutoClick then
-        pcall(function()
-            VirtualUser:Button1Down(Vector2.new(0,0))
-            VirtualUser:Button1Up(Vector2.new(0,0))
-            if Config.FastPunch then
-                VirtualUser:Button1Down(Vector2.new(0,0))
-                VirtualUser:Button1Up(Vector2.new(0,0))
-            end
-        end)
-    end
-end)
-
--- ================= AUTO FARM (HOVER) =================
-local function GetEnemy()
-    local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then return end
-    for _,mob in pairs(enemies:GetChildren()) do
-        local hrp = mob:FindFirstChild("HumanoidRootPart")
-        local hum = mob:FindFirstChild("Humanoid")
-        if hrp and hum and hum.Health > 0 then
-            return mob
-        end
-    end
+--================= LOGIC PLACEHOLDER =================
+-- Anti AFK
+if Config.AntiAFK then
+    LP.Idled:Connect(function()
+        VirtualUser:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+    end)
 end
 
-task.spawn(function()
-    while task.wait(0.15) do
-        if Config.AutoFarm then
-            local mob = GetEnemy()
-            if mob and mob:FindFirstChild("HumanoidRootPart") then
-                local hrp = mob.HumanoidRootPart
-                if Config.HoverFarm then
-                    TP(hrp.CFrame * CFrame.new(0,12,0)) -- bay phía trên
-                else
-                    TP(hrp.CFrame * CFrame.new(0,0,3))
-                end
-            end
-        end
-    end
-end)
-
--- ================= REACH (SAFE) =================
-task.spawn(function()
-    while task.wait(0.5) do
-        local enemies = workspace:FindFirstChild("Enemies")
-        if enemies then
-            for _,mob in pairs(enemies:GetChildren()) do
-                local hrp = mob:FindFirstChild("HumanoidRootPart")
-                local hum = mob:FindFirstChild("Humanoid")
-                if hrp and hum and hum.Health > 0 then
-                    if Config.Reach then
-                        hrp.Size = Vector3.new(Config.ReachSize,Config.ReachSize,Config.ReachSize)
-                        hrp.CanCollide = false
-                        hrp.Transparency = 0.8
-                    else
-                        hrp.Size = Vector3.new(2,2,1)
-                        hrp.Transparency = 1
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- ================= ESP (ENEMY ONLY) =================
-local function ClearESP()
-    for _,v in pairs(game.CoreGui:GetDescendants()) do
-        if v.Name == "MyHubESP" then v:Destroy() end
-    end
+-- FPS Boost (SAFE)
+if Config.FPSBoost then
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 end
 
-task.spawn(function()
-    while task.wait(1) do
-        if not Config.ESP then
-            ClearESP()
-        else
-            local enemies = workspace:FindFirstChild("Enemies")
-            if enemies then
-                for _,mob in pairs(enemies:GetChildren()) do
-                    local hrp = mob:FindFirstChild("HumanoidRootPart")
-                    local hum = mob:FindFirstChild("Humanoid")
-                    if hrp and hum and hum.Health > 0 and not hrp:FindFirstChild("MyHubESP") then
-                        local box = Instance.new("BoxHandleAdornment")
-                        box.Name = "MyHubESP"
-                        box.Adornee = hrp
-                        box.Size = Vector3.new(4,6,4)
-                        box.AlwaysOnTop = true
-                        box.Color3 = Color3.new(1,0,0)
-                        box.Parent = hrp
-                    end
-                end
-            end
-        end
-    end
-end)
-
-print("MyHub FULL READY")
+print("MyHub Framework Loaded Successfully")
