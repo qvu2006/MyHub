@@ -18,7 +18,6 @@ function Main.Start()
     Window:Create()
     Tabs:Init(Window.Main)
 
-    -- Load modules
     for _,module in pairs(Modules:GetChildren()) do
         if module:IsA("Folder") then
             local init = module:FindFirstChild("Init")
@@ -29,4 +28,5 @@ function Main.Start()
     end
 end
 
-return Main
+-- 🔥 GỌI CHẠY
+Main.Start()
